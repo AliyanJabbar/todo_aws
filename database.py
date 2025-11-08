@@ -4,6 +4,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+psycopg2://todoappuser:todoapppw@todoappdb.c3so26oscjij.ap-southeast-2.rds.amazonaws.com:5432/todoappdb")
+# postgresql+psycopg2://<username>:<password>@<endpoint>:<port>/<database_name>
 
 # Create engine and session factory
 engine = create_engine(DATABASE_URL, future=True)
