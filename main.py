@@ -1,14 +1,131 @@
+# import os
+# from fastapi import FastAPI, Request, Depends, HTTPException
+# from fastapi.responses import HTMLResponse, JSONResponse
+# from fastapi.staticfiles import StaticFiles
+# from fastapi.templating import Jinja2Templates
+# from fastapi.middleware.cors import CORSMiddleware
+# from sqlalchemy.orm import Session
+# import models, schemas
+# from database import SessionLocal, engine, Base
+
+# # Create tables if they don't exist
+# Base.metadata.create_all(bind=engine)
+
+# app = FastAPI(title="Todo App")
+
+# # Allow cross-origin for local dev
+# app.add_middleware(
+#     CORSMiddleware,
+#     allow_origins=["*"],  # restrict in production
+#     allow_credentials=True,
+#     allow_methods=["*"],
+#     allow_headers=["*"],
+# )
+# # Use absolute paths so templates/static are found regardless of CWD
+# BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
+# app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
+
+# # Dependency to get DB session
+# def get_db():
+#     db = SessionLocal()
+#     try:
+#         yield db
+#     finally:
+#         db.close()
+
+# # ---------------- Frontend Route ----------------
+# @app.get("/", response_class=HTMLResponse)
+# def home(request: Request):
+#     return templates.TemplateResponse("index.html", {"request": request})
+
+# # ---------------- API Routes (CRUD) ----------------
+# @app.get("/api/todos/", response_model=list[schemas.TodoResponse])
+# def read_todos(db: Session = Depends(get_db)):
+#     return db.query(models.Todo).order_by(models.Todo.id).all()
+
+# @app.post("/api/todos/", response_model=schemas.TodoResponse)
+# def create_todo(todo: schemas.TodoCreate, db: Session = Depends(get_db)):
+#     db_todo = models.Todo(title=todo.title, completed=todo.completed)
+#     db.add(db_todo)
+#     db.commit()
+#     db.refresh(db_todo)
+#     return db_todo
+
+# @app.put("/api/todos/{todo_id}", response_model=schemas.TodoResponse)
+# def update_todo(todo_id: int, todo: schemas.TodoUpdate, db: Session = Depends(get_db)):
+#     db_todo = db.query(models.Todo).filter(models.Todo.id == todo_id).first()
+#     if not db_todo:
+#         raise HTTPException(status_code=404, detail="Todo not found")
+#     db_todo.title = todo.title
+#     db_todo.completed = todo.completed
+#     db.commit()
+#     db.refresh(db_todo)
+#     return db_todo
+
+# @app.delete("/api/todos/{todo_id}")
+# def delete_todo(todo_id: int, db: Session = Depends(get_db)):
+#     db_todo = db.query(models.Todo).filter(models.Todo.id == todo_id).first()
+#     if not db_todo:
+#         raise HTTPException(status_code=404, detail="Todo not found")
+#     db.delete(db_todo)
+#     db.commit()
+#     return {"message": "Todo deleted"}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 import os
+import logging
+from datetime import datetime
 from fastapi import FastAPI, Request, Depends, HTTPException
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
+import boto3
 import models, schemas
 from database import SessionLocal, engine, Base
 
-# Create tables if they don't exist
+# ---------------- Logging Setup ----------------
+LOG_FILE = "app.log"
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[
+        logging.FileHandler(LOG_FILE),
+        logging.StreamHandler()  # logs to console as well
+    ]
+)
+
+logger = logging.getLogger(__name__)
+
+# ---------------- Database Setup ----------------
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Todo App")
@@ -21,7 +138,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-# Use absolute paths so templates/static are found regardless of CWD
+
+# Paths for templates and static files
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
 app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
@@ -34,15 +152,37 @@ def get_db():
     finally:
         db.close()
 
+# ---------------- AWS S3 Setup ----------------
+BUCKET_NAME = "todoappkis3"  # replace with your bucket name
+s3_client = boto3.client("s3")  # relies on EC2 IAM Role
+
+def upload_log_to_s3():
+    """Uploads the current log file to S3 with timestamp."""
+    if not os.path.exists(LOG_FILE):
+        logger.warning("No log file found to upload.")
+        return {"status": "error", "message": "Log file not found."}
+
+    s3_key = f"logs/app_log_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log"
+    try:
+        s3_client.upload_file(LOG_FILE, BUCKET_NAME, s3_key)
+        logger.info(f"Uploaded log file to s3://{BUCKET_NAME}/{s3_key}")
+        return {"status": "success", "message": f"Log uploaded to {s3_key}"}
+    except Exception as e:
+        logger.error(f"Failed to upload log file: {e}")
+        return {"status": "error", "message": str(e)}
+
 # ---------------- Frontend Route ----------------
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request):
+    logger.info("Home page accessed")
     return templates.TemplateResponse("index.html", {"request": request})
 
 # ---------------- API Routes (CRUD) ----------------
 @app.get("/api/todos/", response_model=list[schemas.TodoResponse])
 def read_todos(db: Session = Depends(get_db)):
-    return db.query(models.Todo).order_by(models.Todo.id).all()
+    todos = db.query(models.Todo).order_by(models.Todo.id).all()
+    logger.info(f"Retrieved {len(todos)} todos")
+    return todos
 
 @app.post("/api/todos/", response_model=schemas.TodoResponse)
 def create_todo(todo: schemas.TodoCreate, db: Session = Depends(get_db)):
@@ -50,24 +190,36 @@ def create_todo(todo: schemas.TodoCreate, db: Session = Depends(get_db)):
     db.add(db_todo)
     db.commit()
     db.refresh(db_todo)
+    logger.info(f"Created Todo: {db_todo.title} (ID: {db_todo.id})")
     return db_todo
 
 @app.put("/api/todos/{todo_id}", response_model=schemas.TodoResponse)
 def update_todo(todo_id: int, todo: schemas.TodoUpdate, db: Session = Depends(get_db)):
     db_todo = db.query(models.Todo).filter(models.Todo.id == todo_id).first()
     if not db_todo:
+        logger.warning(f"Todo ID {todo_id} not found for update")
         raise HTTPException(status_code=404, detail="Todo not found")
     db_todo.title = todo.title
     db_todo.completed = todo.completed
     db.commit()
     db.refresh(db_todo)
+    logger.info(f"Updated Todo ID {todo_id}")
     return db_todo
 
 @app.delete("/api/todos/{todo_id}")
 def delete_todo(todo_id: int, db: Session = Depends(get_db)):
     db_todo = db.query(models.Todo).filter(models.Todo.id == todo_id).first()
     if not db_todo:
+        logger.warning(f"Todo ID {todo_id} not found for deletion")
         raise HTTPException(status_code=404, detail="Todo not found")
     db.delete(db_todo)
     db.commit()
+    logger.info(f"Deleted Todo ID {todo_id}")
     return {"message": "Todo deleted"}
+
+# ---------------- Log Upload Route ----------------
+@app.post("/upload-logs")
+def upload_logs_route():
+    """Endpoint to manually upload current log file to S3"""
+    result = upload_log_to_s3()
+    return result
