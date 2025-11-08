@@ -8,7 +8,6 @@ This guide will help you set up and run the **Todo App** on an AWS EC2 instance 
 
 * AWS account
 * Basic knowledge of EC2 and RDS
-* Git installed on your local machine
 
 ---
 
@@ -108,3 +107,4 @@ http://<your-ubuntu-ec2-public-ip>:8000
 * Make sure the EC2 security group allows inbound traffic on port 8000.
 * For production, consider using **NGINX** or **ALB** in front of FastAPI.
 * Keep your RDS credentials secure and do not commit them to the repository.
+
