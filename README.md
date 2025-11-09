@@ -137,6 +137,20 @@ aws s3 cp app.log s3://todoappkis3/logs/app_log_$(date +%Y-%m-%d_%H-%M-%S).log
 
 > The app uses the EC2 **IAM Role** for S3 access — no manual credentials are needed.
 
+### 16. Set CloudWatch Alarm for High Load
+
+* Go to **ec2 > instance > Alarm Status on table's header**.
+* Create a new alarm monitoring **EC2 CPUUtilization**.
+* Set the threshold to **>= 0.99%** over **1 consecutive 5-minute period**.
+* Attach an **SNS Topic** for email notifications when the alarm triggers.
+
+### 17. Add Load Balancer (Optional) (not for free tier)
+
+* Go to **EC2 > Load Balancers**.
+* Create an **Application Load Balancer (ALB)**.
+* Add your EC2 instance to the target group.
+* Update security groups and listeners to forward HTTP/HTTPS traffic to your instance.
+
 ---
 
 ## Notes
@@ -145,3 +159,4 @@ aws s3 cp app.log s3://todoappkis3/logs/app_log_$(date +%Y-%m-%d_%H-%M-%S).log
 * For production, consider using **NGINX** or **ALB** in front of FastAPI.
 * Keep your RDS credentials secure and do not commit them to the repository.
 * The log uploader will continuously push logs to S3 every 10 seconds while the app is running.
+* CloudWatch alarms can alert you via email when CPU usage is high.
