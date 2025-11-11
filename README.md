@@ -135,7 +135,7 @@ I also experimented with setting up an **Application Load Balancer (ALB)** to di
 ## Command to run server with https
 
 I have used openssl to get my https ssl but this is not verified as this is made by me 😁.
-for this command to run properly you must enable custom TCP in security group of you ec2 with the port 8443
+**for this command to run properly you must enable custom TCP in security group of you ec2 with the port 8443**
 
 command to run with https:
 ```bash
@@ -165,6 +165,7 @@ Through this deployment, I gained practical experience in:
 - Connecting distributed AWS services (EC2 ↔ RDS ↔ S3 ↔ CloudWatch ↔ SNS)  
 - Automating server-side logging pipelines  
 - Cloud infrastructure management and monitoring  
+
 
 
 
