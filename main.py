@@ -1,3 +1,5 @@
+# ------------------------------------ this part makes a file and then push that log file to s3 ------------------------------------
+
 # import os
 # import logging
 # from datetime import datetime
