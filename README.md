@@ -1,4 +1,4 @@
-# 🚀 AWS Todo App Deployment
+# 🚀 AWS Dynamic Web Hosting
 
 I built and deployed a **Todo App** on an **AWS EC2 instance**, connected to a **PostgreSQL RDS database**, and integrated **S3 logging**, **CloudWatch monitoring**, and **SNS notifications** for complete observability and automation.
 
@@ -178,3 +178,4 @@ Through this deployment, I gained practical experience in:
 - Connecting distributed AWS services (EC2 ↔ RDS ↔ S3 ↔ CloudWatch ↔ SNS)  
 - Automating server-side logging pipelines  
 - Cloud infrastructure management and monitoring  
+
