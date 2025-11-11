@@ -1,179 +1,152 @@
-# AWS Todo App Setup and Running Guide
+# 🚀 AWS Todo App Deployment
 
-This guide will help you set up and run the **Todo App** on an AWS EC2 instance connected to an RDS PostgreSQL database.
-
----
-
-## Prerequisites
-
-- AWS account
-- Basic knowledge of EC2 and RDS
+I built and deployed a **Todo App** on an **AWS EC2 instance**, connected to a **PostgreSQL RDS database**, and integrated **S3 logging**, **CloudWatch monitoring**, and **SNS notifications** for complete observability and automation.
 
 ---
 
-## Steps to Set Up
+## 🧠 Overview
 
-### 1. Create an IAM Role for EC2
+This project demonstrates my experience with AWS cloud infrastructure — provisioning EC2, RDS, and IAM roles, connecting a FastAPI backend to the database, setting up logging to S3, and configuring CloudWatch alarms with SNS notifications.
 
-- Go to **IAM** in the AWS Console.
-- Create a new role with **EC2** as the trusted entity.
-- Attach the following policies:
+---
 
-  - AmazonS3FullAccess (for S3 log uploads)
-  - AmazonRDSFullAccess (or appropriate RDS access policy)
+## ⚙️ Infrastructure & Configuration
 
-- Give it a name (e.g., `EC2-TodoApp-Role`) and create the role.
-- This IAM role will be automatically used by the app to push logs to S3 without manually setting AWS credentials.
+### 🔐 IAM Role Setup
+I created an IAM role named `EC2-TodoApp-Role` with the following permissions:
+- **AmazonS3FullAccess** (for automated log uploads)
+- **AmazonRDSFullAccess** (to interact with PostgreSQL RDS)
+
+This IAM role allows the EC2 instance to securely push logs to S3 **without storing credentials** in the codebase.
 
 ![IAM Console](assets/iam.png)
 
-### 2. Create an EC2 Instance
+---
 
-- Go to the **EC2** service in the AWS Console.
-- Launch a new instance with your preferred OS (e.g., Ubuntu).
-- Assign the IAM Role created in Step 1 to the instance.
-- In **Security Groups**, allow inbound access to:
+### 💻 EC2 Instance Configuration
+I launched an **Ubuntu EC2 instance**, assigned the IAM role, and configured security groups to allow:
+- **SSH (22)** for remote access  
+- **HTTP (80)** for web access  
+- **Custom TCP (8000)** for FastAPI  
 
-  - SSH (port 22)
-  - HTTP (port 80) if needed
-  - Custom TCP (port 8000) for FastAPI
-
-- Review and launch the instance.
+The instance hosts the FastAPI backend that powers the Todo App.
 
 ![EC2 Instance](assets/ec2.png)
 
-### 3. Create an RDS Instance
+---
 
-- Go to the **RDS** service in AWS.
-- Launch a new **PostgreSQL** database.
-- Configure username, password, and database name.
-- Allow your EC2 instance to access the RDS database:
-
-  - In RDS **Connectivity**, choose **VPC security groups** and add the EC2 security group.
+### 🗄️ RDS PostgreSQL Database
+I set up an **Amazon RDS PostgreSQL instance** and configured it to be accessible from my EC2 instance by linking their security groups.  
+All environment variables for DB credentials and host were securely managed.
 
 ![RDS Console](assets/rds.png)
 
-### 4. Connect EC2 with RDS
+---
 
-- In the **AWS Console**, ensure your EC2 instance can connect to the RDS database.
-- Use the RDS endpoint, username, and password for connection.
+### 🔗 EC2 ↔ RDS Connection
+The app communicates with the PostgreSQL RDS instance using the RDS endpoint, database name, username, and password.  
+Connection testing was done directly from EC2 using the PostgreSQL client.
 
 ![connect ec2 with rds](assets/ec2_rds.png)
 
-### **OR**
+---
 
-### 5. Connect to Your EC2 Instance
+## 🧩 Backend Setup on EC2
 
-- Go to your EC2 instance and click **Connect**.
-- Open the terminal via **EC2 Instance Connect**.
-
-### 6. Install PostgreSQL Client on EC2
+Once the infrastructure was ready, I configured the environment and deployed the FastAPI app.
 
 ```bash
 sudo apt update
 sudo apt install postgresql-client -y
-```
-
-### 7. Install `uv` on EC2
-
-```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
-```
-
-### 8. Clone This Repository
-
-```bash
 git clone <your-repo-url>
-```
-
-### 9. Navigate to Your Project Directory
-
-```bash
 cd todo_aws
-```
-
-### 10. Create a Virtual Environment
-
-```bash
 uv venv
-```
-
-### 11. Install Dependencies
-
-```bash
 uv add "fastapi[standard]"
-```
-
-> This command installs all dependencies listed in `pyproject.toml`.
-
-### 12. Start FastAPI Server
-
-```bash
 fastapi dev main.py --host 0.0.0.0
 ```
 
-### 13. Access Your App
-
-- Open a new browser tab and navigate to:
+The app was successfully accessible at:
 
 ```
-http://<your-ubuntu-ec2-public-ip>:8000
+http://<my-ec2-public-ip>:8000
 ```
 
-### 14. Assign IAM Role for S3 Access
+---
 
-- Ensure the EC2 instance has the IAM role created in Step 1 assigned.
-- This role allows the app to automatically push logs to S3 without configuring AWS credentials manually.
+## ☁️ AWS S3 Integration for Logs
 
-### 15. Logging and S3 Upload
+I configured automatic log uploads from EC2 to **Amazon S3** every 10 seconds.  
+All logs are stored under the bucket `todoappkis3` inside the `/logs` directory.
 
-- The app automatically creates logs in `app.log` in the project root.
-- Logs are **pushed to S3 every 10 seconds** (bucket: `todoappkis3`) under the `logs/` folder with a timestamp:
-
+Example log files:
 ```
 logs/app_log_2025-11-09_16-50-10.log
 logs/app_log_2025-11-09_16-50-20.log
 ```
 
-- You can manually upload logs using the endpoint:
-
+Manual log uploads can also be triggered via:
 ```bash
-curl -X POST http://<your-ec2-public-ip>:8000/upload-logs
+curl -X POST http://<my-ec2-public-ip>:8000/upload-logs
 ```
 
-- Or using the AWS CLI:
-
+or using AWS CLI:
 ```bash
 aws s3 cp app.log s3://todoappkis3/logs/app_log_$(date +%Y-%m-%d_%H-%M-%S).log
 ```
 
-> The app uses the EC2 **IAM Role** for S3 access — no manual credentials are needed.
+> Thanks to the attached IAM Role, no manual AWS credentials were required.
 
 ![s3 bucket](assets/s3.png)
 
-### 16. Set CloudWatch Alarm for High Load
+---
 
-- Go to **ec2 > instance > Alarm Status on table's header**.
-- Create a new alarm monitoring **EC2 CPUUtilization**.
-- Set the threshold to **>= 0.99%** over **1 consecutive 5-minute period**.
-- Attach an **SNS Topic** for email notifications when the alarm triggers.
+## 📊 CloudWatch Monitoring
+
+I configured **CloudWatch alarms** to monitor the EC2 instance’s **CPU utilization**.  
+Whenever CPU usage exceeds **0.99%** over a 5-minute period, CloudWatch automatically triggers notifications through **SNS**.
 
 ![cloudwatch](assets/cloudwatch.png)
-![SNS](assets/sns.png)
-
-### 17. Add Load Balancer (Optional) (not for free tier)
-
-- Go to **EC2 > Load Balancers**.
-- Create an **Application Load Balancer (ALB)**.
-- Add your EC2 instance to the target group.
-- Update security groups and listeners to forward HTTP/HTTPS traffic to your instance.
 
 ---
 
-## Notes
+## 📣 SNS Notification Service
 
-- Make sure the EC2 security group allows inbound traffic on port 8000.
-- For production, consider using **NGINX** or **ALB** in front of FastAPI.
-- Keep your RDS credentials secure and do not commit them to the repository.
-- The log uploader will continuously push logs to S3 every 10 seconds while the app is running.
-- CloudWatch alarms can alert you via email when CPU usage is high.
+To ensure real-time alerts, I integrated **Amazon SNS (Simple Notification Service)** with CloudWatch alarms.
+
+- Created an **SNS Topic** named `TodoAppAlerts`.
+- Subscribed my **email address** to the topic to receive alerts.
+- Linked the topic with the CloudWatch CPUUtilization alarm.
+
+Now, whenever the CPU usage crosses the defined threshold, I receive an instant email notification about the alert.
+
+![SNS](assets/sns.png)
+
+---
+
+## ⚡ Load Balancer
+
+I also experimented with setting up an **Application Load Balancer (ALB)** to distribute traffic to the EC2 instance — ideal for scaling beyond the free tier. But unfortunately I was unable to do this in free tier, giving me an error something like this
+
+![LoadBalancer](assets/loadbalancer.png)
+
+---
+
+## 🧾 Key Highlights
+
+- ✅ **FastAPI backend** deployed on AWS EC2  
+- ✅ **RDS PostgreSQL** for data persistence  
+- ✅ **S3 integration** for automated log storage  
+- ✅ **CloudWatch + SNS** for proactive monitoring  
+- ✅ **IAM Role-based authentication** (no credentials needed)  
+- ✅ **Scalable setup with optional ALB support**
+
+---
+
+## 🧠 Learnings & Takeaways
+
+Through this deployment, I gained practical experience in:
+- Secure AWS IAM role configurations  
+- Connecting distributed AWS services (EC2 ↔ RDS ↔ S3 ↔ CloudWatch ↔ SNS)  
+- Automating server-side logging pipelines  
+- Cloud infrastructure management and monitoring  
