@@ -130,6 +130,8 @@ I also experimented with setting up an **Application Load Balancer (ALB)** to di
 
 ![LoadBalancer](assets/loadbalancer.png)
 
+but instead of an application load balancer, we can create a classic load balancer which will do two main things. At first it will give us a domain which will be used as our main domain. Traffic on that domain will be balanced on the instances present on behind of that load balancer.
+
 ---
 
 ## Create self-signed certificate with openssl for Https protocol
@@ -178,5 +180,6 @@ Through this deployment, I gained practical experience in:
 - Connecting distributed AWS services (EC2 ↔ RDS ↔ S3 ↔ CloudWatch ↔ SNS)  
 - Automating server-side logging pipelines  
 - Cloud infrastructure management and monitoring  
+
 
 
