@@ -130,14 +130,35 @@ I also experimented with setting up an **Application Load Balancer (ALB)** to di
 
 ![LoadBalancer](assets/loadbalancer.png)
 
+---
+
+## ⚡ Classic Load Balancer CLB
+
 but instead of an application load balancer, we can create a classic load balancer which will do two main things. At first it will give us a domain which will be used as our main domain. Traffic on that domain will be balanced on the instances present on behind of that load balancer.
+
+1. Go to **EC2 Dashboard → Load Balancers**.
+2. Under **Load Balancers**, click **Create Load Balancer** and select **Classic Load Balancer (CLB)**.
+3. After creation, open your Classic Load Balancer and go to the **Instances** tab.
+4. Click **Edit Instances** and **add your target EC2 instance**.
+5. Go to the **Health Check** tab and configure:
+   - **Ping Protocol:** `HTTP`
+   - **Ping Port:** `8000`
+6. Save your settings.
+
+---
+
+### ⚠️ Important Note
+If you plan to use this Classic Load Balancer for **HTTPS**, you **cannot use a self-signed certificate**.  
+You must use a valid SSL certificate from **AWS ACM** or another trusted Certificate Authority.
+
+![ClassicLoadBalancer](assets/classicloadbalancer.png)
 
 ---
 
 ## Create self-signed certificate with openssl for Https protocol
 
 I have used openssl to get my https protocol but this is not verified as this is made by me 😁.
-**for this command to run properly you must enable custom TCP in security group of you ec2 with the port 8443**
+**for this command to run properly you must enable custom TCP in security group of you ec2 with the port 8443 or you can use 8000 port**
 
 for self-signed certificate:
 ```bash
@@ -161,7 +182,6 @@ uvicorn main:app --host 0.0.0.0 --port 8443 \
 
 ---
 
-
 ## 🧾 Key Highlights
 
 - ✅ **FastAPI backend** deployed on AWS EC2  
@@ -180,6 +200,3 @@ Through this deployment, I gained practical experience in:
 - Connecting distributed AWS services (EC2 ↔ RDS ↔ S3 ↔ CloudWatch ↔ SNS)  
 - Automating server-side logging pipelines  
 - Cloud infrastructure management and monitoring  
-
-
-
